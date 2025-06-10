@@ -1,0 +1,174 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  TRAINER
+  GYM_OWNER
+  ADMIN
+}
+
+/// @model
+/// @description User entity for authentication and profile management
+model User {
+  /// @id
+  /// @default(uuid())
+  id                String    @id @default(uuid())
+
+  /// @description User's full name
+  name              String
+
+  /// @description User's email address (unique)
+  email             String    @unique
+
+  /// @description Hashed password
+  password          String
+
+  /// @description User role
+  role              UserRole  @default(USER)
+
+  /// @description Whether the user account is active
+  isActive          Boolean   @default(true)
+
+  /// @description Whether the user is locked
+  isLocked          Boolean   @default(false)
+
+  /// @description Number of failed login attempts
+  failedAttempts    Int       @default(0)
+
+  /// @description When the user was created
+  createdAt         DateTime  @default(now())
+
+  /// @description When the user was last updated
+  updatedAt         DateTime  @updatedAt
+
+  /// @description When the user last logged in
+  lastLogin         DateTime?
+
+  /// @description When the last failed login attempt was
+  lastFailedAttempt DateTime?
+
+  /// @description When the user's lock expires
+  lockExpiresAt     DateTime?
+
+  /// @description User metadata
+  metadata          Json      @default("{}")
+
+  /// @description Gyms owned by this user
+  gyms              Gym[]     @relation("GymOwner")
+
+  /// @description Trainer profile (if user is a trainer)
+  trainer           Trainer?  @relation("TrainerUser")
+
+  @@map("users")
+}
+
+/// @model
+/// @description Gym entity for gym management
+model Gym {
+  /// @id
+  /// @default(uuid())
+  id               String         @id @default(uuid())
+
+  /// @description Gym name
+  name             String
+
+  /// @description Gym description
+  description      String
+
+  /// @description Gym physical address
+  address          String
+
+  /// @description Gym latitude coordinate
+  latitude         Float
+
+  /// @description Gym longitude coordinate
+  longitude        Float
+
+  /// @description Gym contact phone
+  phone            String
+
+  /// @description Gym contact email
+  email            String
+
+  /// @description Gym opening hours (JSON format)
+  openingHours     Json           @default("{}")
+
+  /// @description Whether the gym is active
+  isActive         Boolean        @default(true)
+
+  /// @description When the gym was created
+  createdAt        DateTime       @default(now())
+
+  /// @description When the gym was last updated
+  updatedAt        DateTime       @updatedAt
+
+  /// @description Gym owner ID
+  ownerId          String
+
+  /// @description Gym owner relationship
+  owner            User           @relation("GymOwner", fields: [ownerId], references: [id])
+
+  @@map("gyms")
+  @@index([latitude, longitude])
+  @@index([ownerId])
+  @@index([name])
+}
+
+/// @model
+/// @description Trainer entity for personal trainers
+model Trainer {
+  /// @id
+  /// @default(uuid())
+  id               String         @id @default(uuid())
+
+  /// @description Reference to the user (relationship with User table)
+  userId           String         @unique
+
+  /// @description Professional bio/description
+  bio              String?
+
+  /// @description List of specialties (JSON array)
+  specialties      Json           @default("[]")
+
+  /// @description List of available languages (JSON array)
+  languages        Json           @default("[]")
+
+  /// @description Average rating from clients (optional)
+  rating           Float?
+
+  /// @description Suggested price per session
+  pricePerSession  Float?
+
+  /// @description Available times/schedule (JSON format)
+  availableTimes   Json           @default("{}")
+
+  /// @description Whether the trainer profile is active
+  isActive         Boolean        @default(true)
+
+  /// @description When the trainer profile was created
+  createdAt        DateTime       @default(now())
+
+  /// @description When the trainer profile was last updated
+  updatedAt        DateTime       @updatedAt
+
+  /// @description Trainer metadata
+  metadata         Json           @default("{}")
+
+  /// @description User relationship
+  user             User           @relation("TrainerUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("trainers")
+  @@index([userId])
+  @@index([rating])
+  @@index([pricePerSession])
+} 

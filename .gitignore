@@ -134,3 +134,17 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+v*
+
+# PM2 logs
+logs/
+*.log
+
+# PM2 ecosystem files (opcional, puedes commitearlos si quieres)
+# ecosystem.config.js
+# ecosystem.production.config.js
+
+# Environment variables
+.env
+.env.local
+.env.production
