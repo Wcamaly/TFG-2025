@@ -1,91 +1,69 @@
-import { Body, Controller, Post, Get, UseGuards } from '@nestjs/common';
-import { ForgotPasswordDto } from '../dtos/forgot-password.dto';
-import { ResetPasswordDto } from '../dtos/reset-password.dto';
-import { RegisterUserDto } from '../dtos/register-user.dto';
-import { LoginUserDto } from '../dtos/login-user.dto';
-import { RegisterResponseDto, LoginResponseDto, UserResponseDto } from '../dtos/user-response.dto';
-import { ForgotPasswordUseCase } from '@/apps/users/src/application/use-cases/forgot-password.use-case';
-import { ResetPasswordUseCase } from '@/apps/users/src/application/use-cases/reset-password.use-case';
-import { RegisterUserUseCase } from '@/apps/users/src/application/use-cases/register-user.use-case';
-import { LoginUserUseCase } from '@/apps/users/src/application/use-cases/login-user.use-case';
-import { GetMeUseCase } from '@/apps/users/src/application/use-cases/get-me.use-case';
+import { Body, Controller, Get, Param, Put, Delete } from '@nestjs/common';
 import { User } from '@/apps/users/src/domain/entities/user.entity';
-import { JwtAuthGuard, CurrentUser } from '@core/index';
-import { AuthenticatedUser } from '@/apps/users/src/domain/types/auth.types';
+import { Profile } from '@/apps/users/src/domain/entities/profile.entity';
+import { UserPreferences } from '@/apps/users/src/domain/entities/user-preferences.entity';
+import { GetUserUseCase } from '@/apps/users/src/application/use-cases/get-user.use-case';
+import { ListUsersUseCase } from '@/apps/users/src/application/use-cases/list-users.use-case';
+import { UpdateUserUseCase } from '@/apps/users/src/application/use-cases/update-user.use-case';
+import { DeleteUserUseCase } from '@/apps/users/src/application/use-cases/delete-user.use-case';
+import { GetUserProfileUseCase } from '@/apps/users/src/application/use-cases/get-user-profile.use-case';
+import { UpdateUserProfileUseCase } from '@/apps/users/src/application/use-cases/update-user-profile.use-case';
+import { GetUserPreferencesUseCase } from '@/apps/users/src/application/use-cases/get-user-preferences.use-case';
+import { UpdateUserPreferencesUseCase } from '@/apps/users/src/application/use-cases/update-user-preferences.use-case';
+import { UpdateUserDto } from '../dtos/update-user.dto';
+import { UpdateProfileDto } from '../dtos/update-profile.dto';
+import { UpdatePreferencesDto } from '../dtos/update-preferences.dto';
 
 @Controller('users')
 export class UsersController {
   constructor(
-    private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
-    private readonly resetPasswordUseCase: ResetPasswordUseCase,
-    private readonly registerUserUseCase: RegisterUserUseCase,
-    private readonly loginUserUseCase: LoginUserUseCase,
-    private readonly getMeUseCase: GetMeUseCase,
+    private readonly getUserUseCase: GetUserUseCase,
+    private readonly listUsersUseCase: ListUsersUseCase,
+    private readonly updateUserUseCase: UpdateUserUseCase,
+    private readonly deleteUserUseCase: DeleteUserUseCase,
+    private readonly getUserProfileUseCase: GetUserProfileUseCase,
+    private readonly updateUserProfileUseCase: UpdateUserProfileUseCase,
+    private readonly getUserPreferencesUseCase: GetUserPreferencesUseCase,
+    private readonly updateUserPreferencesUseCase: UpdateUserPreferencesUseCase,
   ) {}
 
-  @Post('register')
-  async register(@Body() dto: RegisterUserDto): Promise<RegisterResponseDto> {
-    const result = await this.registerUserUseCase.execute({
-      email: dto.email,
-      name: dto.name,
-      password: dto.password,
-      role: dto.role,
-    });
-
-    return {
-      user: this.mapUserToDto(result.user),
-      token: result.token,
-      message: 'User registered successfully',
-    };
+  @Get()
+  async listUsers(): Promise<User[]> {
+    return this.listUsersUseCase.execute();
   }
 
-  @Post('login')
-  async login(@Body() dto: LoginUserDto): Promise<LoginResponseDto> {
-    const result = await this.loginUserUseCase.execute({
-      email: dto.email,
-      password: dto.password,
-    });
-
-    return {
-      user: this.mapUserToDto(result.user),
-      token: result.token,
-      message: 'Login successful',
-    };
+  @Get(':id')
+  async getUserById(@Param('id') id: string): Promise<User> {
+    return this.getUserUseCase.execute(id);
   }
 
-  @Get('me')
-  @UseGuards(JwtAuthGuard)
-  async getMe(@CurrentUser<AuthenticatedUser>() user: AuthenticatedUser): Promise<UserResponseDto> {
-    const userData = await this.getMeUseCase.execute({
-      userId: user.id,
-    });
-
-    return this.mapUserToDto(userData);
+  @Put(':id')
+  async updateUser(@Param('id') id: string, @Body() userData: UpdateUserDto): Promise<User> {
+    return this.updateUserUseCase.execute(id, userData);
   }
 
-  private mapUserToDto(user: User): UserResponseDto {
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      isActive: user.isActive,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      lastLogin: user.lastLogin,
-    };
+  @Delete(':id')
+  async deleteUser(@Param('id') id: string): Promise<void> {
+    return this.deleteUserUseCase.execute(id);
   }
 
-  @Post('forgot-password')
-  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<void> {
-    await this.forgotPasswordUseCase.execute({ email: dto.email });
+  @Get(':id/profile')
+  async getUserProfile(@Param('id') id: string): Promise<Profile> {
+    return this.getUserProfileUseCase.execute(id);
   }
 
-  @Post('reset-password')
-  async resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
-    await this.resetPasswordUseCase.execute({
-      token: dto.token,
-      newPassword: dto.newPassword,
-    });
+  @Put(':id/profile')
+  async updateUserProfile(@Param('id') id: string, @Body() profileData: UpdateProfileDto): Promise<Profile> {
+    return this.updateUserProfileUseCase.execute(id, profileData);
+  }
+
+  @Get(':id/preferences')
+  async getUserPreferences(@Param('id') id: string): Promise<UserPreferences> {
+    return this.getUserPreferencesUseCase.execute(id);
+  }
+
+  @Put(':id/preferences')
+  async updateUserPreferences(@Param('id') id: string, @Body() preferencesData: UpdatePreferencesDto): Promise<UserPreferences> {
+    return this.updateUserPreferencesUseCase.execute(id, preferencesData);
   }
 } 

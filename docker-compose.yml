@@ -21,6 +21,23 @@ services:
     networks:
       - training-network
 
+  # Redis for Pub/Sub
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - training-network
+
   # Users Service
   users-service:
     build:
@@ -37,8 +54,11 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://devuser:devpass@postgres:5432/trainingdb
       - PORT_USERS=3000
+      - REDIS_URL=redis://redis:6379
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - training-network
@@ -66,8 +86,11 @@ services:
       - PORT_AUTH=3000
       - JWT_SECRET=your-super-secret-jwt-key-here
       - PASSPORT_SECRET=your-passport-secret-here
+      - REDIS_URL=redis://redis:6379
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - training-network
@@ -95,8 +118,11 @@ services:
       - PORT_GYMS=3000
       - JWT_SECRET=your-super-secret-jwt-key-here
       - PASSPORT_SECRET=your-passport-secret-here
+      - REDIS_URL=redis://redis:6379
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - training-network
@@ -123,8 +149,11 @@ services:
       - DATABASE_URL=postgresql://devuser:devpass@postgres:5432/trainingdb
       - PORT_BOOKINGS=3000
       - JWT_SECRET=your-super-secret-jwt-key-here
+      - REDIS_URL=redis://redis:6379
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - training-network
@@ -151,8 +180,11 @@ services:
       - DATABASE_URL=postgresql://devuser:devpass@postgres:5432/trainingdb
       - PORT_PAYMENTS=3000
       - JWT_SECRET=your-super-secret-jwt-key-here
+      - REDIS_URL=redis://redis:6379
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - training-network
@@ -161,6 +193,31 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+  
+  # Routines Service
+  routines-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        NODEJS_VERSION: 18
+        PROJECT: routines
+    restart: unless-stopped
+    ports:
+      - "3008:3000"
+    environment:
+      - NODE_ENV=production 
+      - DATABASE_URL=postgresql://devuser:devpass@postgres:5432/trainingdb
+      - PORT_ROUTINES=3000
+      - JWT_SECRET=your-super-secret-jwt-key-here
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 
   # Trainings Service
   trainers-service:
@@ -179,8 +236,11 @@ services:
       - DATABASE_URL=postgresql://devuser:devpass@postgres:5432/trainingdb
       - PORT_TRAININGS=3000
       - JWT_SECRET=your-super-secret-jwt-key-here
+      - REDIS_URL=redis://redis:6379
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - training-network
@@ -189,6 +249,57 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # Trainer Offert Service
+  trainer-offert-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        NODEJS_VERSION: 18
+        PROJECT: trainer-offert
+    restart: unless-stopped
+    ports:
+      - "3007:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://devuser:devpass@postgres:5432/trainingdb  
+      - PORT_TRAINER_OFFERT=3000
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - training-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Notifications Service
+  notifications-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        NODEJS_VERSION: 18
+        PROJECT: notifications
+    restart: unless-stopped
+    ports:
+      - "3009:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://devuser:devpass@postgres:5432/trainingdb
+      - PORT_NOTIFICATIONS=3000
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # API Gateway (opcional - para centralizar todas las APIs)
   nginx:
@@ -205,12 +316,15 @@ services:
       - gyms-service
       - bookings-service
       - payments-service
+      - routines-service
       - trainers-service
+      - trainer-offert-service
     networks:
       - training-network
 
 volumes:
   pgdata:
+  redisdata:
 
 networks:
   training-network:

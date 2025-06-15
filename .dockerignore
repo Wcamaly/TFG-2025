@@ -1,0 +1,94 @@
+# Dependencies
+node_modules
+.pnpm-store
+.npm
+.yarn
+.pnp.*
+
+# Source control
+.git
+.gitignore
+.gitattributes
+.github
+
+# Development environment
+.env
+.env.*
+!.env.example
+.editorconfig
+.eslintrc
+.prettierrc
+.vscode
+.idea
+*.sublime-*
+
+# Build outputs
+dist
+build
+*.tsbuildinfo
+coverage
+.nyc_output
+junit.xml
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# System files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Test files
+**/*.spec.ts
+**/*.test.ts
+test
+__tests__
+__mocks__
+jest.config.*
+
+# Documentation
+docs
+*.md
+!README.md
+
+# Docker
+Dockerfile*
+docker-compose*
+.docker
+
+# Temporary files
+tmp
+temp
+*.tmp
+*.temp
+
+# Cache directories
+.cache
+.eslintcache
+.stylelintcache
+.prettiercache
+
+# Misc
+*.gz
+*.zip
+*.tar
+*.tgz
+*.rar
+.husky
+.commitlintrc
+.lintstagedrc
+.npmrc
+.yarnrc
+.pnpmrc
+
+# Project specific
+prisma/migrations
+prisma/dev.db
+prisma/test.db 
+v*

@@ -93,6 +93,34 @@
         "tsConfigPath": "libs/src/infra/tsconfig.lib.json"
       }
     },
+    "trainer-offert": {
+      "type": "application",
+      "root": "apps/trainer-offert",
+      "entryFile": "main",
+      "sourceRoot": "apps/trainer-offert/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/trainer-offert/tsconfig.app.json"
+      }
+    },
+    "routines": {
+      "type": "application",
+      "root": "apps/routines",
+      "entryFile": "main",
+      "sourceRoot": "apps/routines/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/routines/tsconfig.app.json"
+      }
+    },
+    "notifications": {
+      "type": "application",
+      "root": "apps/notifications",
+      "entryFile": "main",
+      "sourceRoot": "apps/notifications/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/notifications/tsconfig.app.json"
+      }
+    },
+
     "core": {
       "type": "library",
       "root": "libs/src/core",

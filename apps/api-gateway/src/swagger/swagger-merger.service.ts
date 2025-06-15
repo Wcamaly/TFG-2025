@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { MicroservicesService } from '@infra/microservices/microservices.service';
 
 export interface ServiceConfig {
   name: string;
@@ -9,67 +10,84 @@ export interface ServiceConfig {
   tag: string;
 }
 
+interface Service {
+  name: string;
+  url: string;
+  prefix: string;
+}
+
+interface ServiceHealth {
+  service: Service;
+  status: 'online' | 'offline';
+  responseTime: number;
+}
+
 @Injectable()
 export class SwaggerMergerService {
   private readonly logger = new Logger(SwaggerMergerService.name);
-  
-  private readonly services: ServiceConfig[] = [
-    {
-      name: 'Auth Service',
-      url: process.env.AUTH_SERVICE_URL || 'http://localhost:3002',
-      prefix: '/auth',
-      description: '🔐 Autenticación y autorización',
-      tag: 'auth'
-    },
-    {
-      name: 'Users Service', 
-      url: process.env.USERS_SERVICE_URL || 'http://localhost:3001',
-      prefix: '/users',
-      description: '👥 Gestión de usuarios',
-      tag: 'users'
-    },
-    {
-      name: 'Trainers Service',
-      url: process.env.TRAINERS_SERVICE_URL || 'http://localhost:3006', 
-      prefix: '/trainers',
-      description: '🏋️ Gestión de entrenadores',
-      tag: 'trainers'
-    },
-    {
-      name: 'Gyms Service',
-      url: process.env.GYMS_SERVICE_URL || 'http://localhost:3003',
-      prefix: '/gyms', 
-      description: '🏢 Gestión de gimnasios',
-      tag: 'gyms'
-    },
-    {
-      name: 'Bookings Service',
-      url: process.env.BOOKINGS_SERVICE_URL || 'http://localhost:3004',
-      prefix: '/bookings',
-      description: '📅 Gestión de reservas', 
-      tag: 'bookings'
-    },
-    {
-      name: 'Payments Service',
-      url: process.env.PAYMENTS_SERVICE_URL || 'http://localhost:3005',
-      prefix: '/payments',
-      description: '💳 Gestión de pagos',
-      tag: 'payments'
-    }
-  ];
+  private readonly services: ServiceConfig[];
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly microservicesService: MicroservicesService
+  ) {
+    this.services = [
+      {
+        name: 'Auth Service',
+        url: this.configService.get<string>('AUTH_SERVICE_URL', 'http://localhost:3002'),
+        prefix: '/auth',
+        description: '🔐 Autenticación y autorización',
+        tag: 'auth'
+      },
+      {
+        name: 'Users Service', 
+        url: this.configService.get<string>('USERS_SERVICE_URL', 'http://localhost:3001'),
+        prefix: '/users',
+        description: '👥 Gestión de usuarios',
+        tag: 'users'
+      },
+      {
+        name: 'Trainers Service',
+        url: this.configService.get<string>('TRAINERS_SERVICE_URL', 'http://localhost:3006'), 
+        prefix: '/trainers',
+        description: '🏋️ Gestión de entrenadores',
+        tag: 'trainers'
+      },
+      {
+        name: 'Gyms Service',
+        url: this.configService.get<string>('GYMS_SERVICE_URL', 'http://localhost:3003'),
+        prefix: '/gyms', 
+        description: '🏢 Gestión de gimnasios',
+        tag: 'gyms'
+      },
+      {
+        name: 'Bookings Service',
+        url: this.configService.get<string>('BOOKINGS_SERVICE_URL', 'http://localhost:3004'),
+        prefix: '/bookings',
+        description: '📅 Gestión de reservas', 
+        tag: 'bookings'
+      },
+      {
+        name: 'Payments Service',
+        url: this.configService.get<string>('PAYMENTS_SERVICE_URL', 'http://localhost:3005'),
+        prefix: '/payments',
+        description: '💳 Gestión de pagos',
+        tag: 'payments'
+      },
+      {
+        name: 'Trainer Offert Service',
+        url: this.configService.get<string>('TRAINER_OFFERT_SERVICE_URL', 'http://localhost:3007'),
+        prefix: '/trainer-offert',
+        description: '💳 Gestión de ofertas de entrenadores',
+        tag: 'trainer-offert'
+      }
+    ];
+  }
 
   async getMergedSwaggerDocument(): Promise<any> {
     const baseDocument = this.createBaseDocument();
-    
-    // Obtener documentos de cada servicio
     const serviceDocuments = await this.fetchAllServiceDocuments();
-    
-    // Combinar todos los documentos
-    const mergedDocument = this.mergeDocuments(baseDocument, serviceDocuments);
-    
-    return mergedDocument;
+    return this.mergeDocuments(baseDocument, serviceDocuments);
   }
 
   private createBaseDocument(): any {
@@ -158,9 +176,8 @@ Todos los endpoints requieren autenticación JWT Bearer token.
           results.push({ service, document });
           this.logger.log(`✅ Swagger obtenido de ${service.name}`);
         }
-              } catch (error) {
-          this.logger.warn(`⚠️ No se pudo obtener Swagger de ${service.name}: ${error instanceof Error ? error.message : String(error)}`);
-        // Agregar endpoints de fallback si el servicio no está disponible
+      } catch (error) {
+        this.logger.warn(`⚠️ No se pudo obtener Swagger de ${service.name}: ${error instanceof Error ? error.message : String(error)}`);
         results.push({ 
           service, 
           document: this.createFallbackDocument(service) 
@@ -172,19 +189,13 @@ Todos los endpoints requieren autenticación JWT Bearer token.
   }
 
   private async fetchServiceSwagger(service: ServiceConfig): Promise<any> {
-    const url = `${service.url}/api-json`;
-    
-    const response = await fetch(url, {
+    return this.microservicesService.httpRequest(service.name, {
+      url: '/api-json',
+      method: 'GET',
       headers: {
         'Accept': 'application/json'
       }
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    return await response.json();
   }
 
   private createFallbackDocument(service: ServiceConfig): any {
@@ -227,7 +238,6 @@ Todos los endpoints requieren autenticación JWT Bearer token.
     const merged = { ...baseDocument };
 
     for (const { service, document } of serviceDocuments) {
-      // Merge paths con prefix
       if (document.paths) {
         for (const [path, methods] of Object.entries(document.paths)) {
           const prefixedPath = `${service.prefix}${path}`;
@@ -235,7 +245,6 @@ Todos los endpoints requieren autenticación JWT Bearer token.
         }
       }
 
-      // Merge components/schemas
       if (document.components?.schemas) {
         merged.components.schemas = {
           ...merged.components.schemas,
@@ -243,7 +252,6 @@ Todos los endpoints requieren autenticación JWT Bearer token.
         };
       }
 
-      // Merge other components
       if (document.components?.responses) {
         merged.components.responses = {
           ...merged.components.responses,
@@ -295,28 +303,88 @@ Todos los endpoints requieren autenticación JWT Bearer token.
     return [...this.services];
   }
 
-  async getServiceHealth(): Promise<Array<{service: ServiceConfig, status: 'online' | 'offline', responseTime?: number}>> {
-    const healthChecks = [];
-    
-    for (const service of this.services) {
-      const startTime = Date.now();
-      try {
-        const response = await fetch(`${service.url}/api-json`);
-        
-        const responseTime = Date.now() - startTime;
-        healthChecks.push({
-          service,
-          status: response.ok ? 'online' : 'offline' as const,
-          responseTime
-        });
-      } catch (error) {
-        healthChecks.push({
-          service,
-          status: 'offline' as const
-        });
+  async getServiceHealth(): Promise<ServiceHealth[]> {
+    const healthChecks = await Promise.all(
+      this.services.map(async (service) => {
+        const startTime = Date.now();
+        try {
+          const response = await this.microservicesService.httpRequest(service.name, {
+            url: '/health',
+            method: 'GET'
+          });
+          const endTime = Date.now();
+          return {
+            service: {
+              name: service.name,
+              url: service.url,
+              prefix: service.prefix
+            },
+            status: response && typeof response === 'object' && 'status' in response ? response.status === 'ok' ? 'online' : 'offline' : 'offline',
+            responseTime: endTime - startTime
+          };
+        } catch (error) {
+          return {
+            service: {
+              name: service.name,
+              url: service.url,
+              prefix: service.prefix
+            },
+            status: 'offline',
+            responseTime: Date.now() - startTime
+          };
+        }
+      })
+    );
+
+    return healthChecks as ServiceHealth[];
+  }
+
+  async mergeSwaggerDocs(): Promise<any> {
+    const swaggerDocs = await Promise.all(
+      this.services.map(async (service) => {
+        try {
+          const data = await this.microservicesService.httpRequest(service.name, {
+            url: '/api-json',
+            method: 'GET'
+          });
+          const swaggerData = data as { paths: Record<string, any> };
+          return {
+            ...swaggerData,
+            paths: Object.entries(swaggerData.paths).reduce<Record<string, any>>((acc, [path, methods]) => {
+              acc[`${service.prefix}${path}`] = methods;
+              return acc;
+            }, {})
+          };
+        } catch (error) {
+          this.logger.error(`Error fetching swagger docs from ${service.name}:`, error);
+          return null;
+        }
+      })
+    );
+
+    const validDocs = swaggerDocs.filter(doc => doc !== null);
+
+    return {
+      openapi: '3.0.0',
+      info: {
+        title: 'API Gateway',
+        version: '1.0.0',
+        description: 'API Gateway for all microservices'
+      },
+      paths: validDocs.reduce((acc, doc) => ({
+        ...acc,
+        ...doc.paths
+      }), {}),
+      components: {
+        schemas: validDocs.reduce((acc, doc: any) => ({
+          ...acc,
+          ...((doc as any).components?.schemas || {})
+        }), {}),
+        securitySchemes: validDocs.reduce((acc, doc: any) => ({
+          ...acc,
+          ...((doc as any).components?.securitySchemes || {})
+        }), {})
       }
-    }
-    
-    return healthChecks;
+    };
   }
 } 

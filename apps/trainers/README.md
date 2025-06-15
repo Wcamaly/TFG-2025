@@ -1,28 +1,100 @@
-# 🏋️ Módulo Trainers
+# Módulo de Entrenadores
 
-## 📋 Descripción
+## Descripción
+Módulo encargado de la gestión de entrenadores personales, sus especialidades, idiomas, disponibilidad y precios.
 
-El módulo **Trainers** gestiona los perfiles de entrenadores personales dentro del sistema de gestión de entrenamiento. Permite a los usuarios registrarse como entrenadores, definir sus especialidades, idiomas, disponibilidad y precios.
+## Arquitectura
 
-## 🏗️ Arquitectura
+### Capas
+- **Domain**: 
+  - Entidades: Trainer, Specialization, Availability
+  - Value Objects: Language, Rating, Price
+  - Agregados: TrainerAggregate
+- **Application**: 
+  - Casos de uso para gestión de entrenadores
+  - Servicios de aplicación
+- **Infrastructure**: 
+  - Repositorios
+  - Adaptadores de persistencia
+  - Integración con servicios externos
 
-Este módulo sigue los principios de **Domain-Driven Design (DDD)** y **Clean Architecture**:
+### Patrones de Diseño
+- **Repository Pattern**: Para acceso a datos de entrenadores
+- **Factory Pattern**: Para creación de especialidades
+- **Strategy Pattern**: Para diferentes tipos de entrenamiento
+- **Observer Pattern**: Para eventos de entrenador
 
+## Funcionalidades Principales
+- Gestión de perfiles de entrenadores
+- Administración de especialidades y certificaciones
+- Control de disponibilidad y horarios
+- Gestión de idiomas y precios
+- Sistema de calificaciones
+- Búsqueda avanzada de entrenadores
+- Estadísticas y reportes
+
+## Endpoints
+- `GET /trainers`: Listar entrenadores
+- `GET /trainers/:id`: Obtener entrenador por ID
+- `POST /trainers`: Crear entrenador
+- `PUT /trainers/:id`: Actualizar entrenador
+- `DELETE /trainers/:id`: Eliminar entrenador
+- `GET /trainers/specialties`: Listar especialidades
+- `GET /trainers/languages`: Listar idiomas
+- `GET /trainers/search`: Búsqueda avanzada
+
+## Modelo de Datos
+```typescript
+interface Trainer {
+  id: string;
+  userId: string;
+  bio: string;
+  specialties: Specialization[];
+  languages: Language[];
+  rating: Rating;
+  pricePerSession: Price;
+  availability: Availability;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface Specialization {
+  id: string;
+  name: string;
+  description: string;
+  level: string;
+  yearsOfExperience: number;
+}
+
+interface Availability {
+  weeklySchedule: WeeklySchedule;
+  exceptions: ScheduleException[];
+  timeZone: string;
+}
 ```
-trainers/
-├── src/
-│   ├── domain/              # Capa de dominio
-│   │   ├── entities/        # Entidades de negocio
-│   │   ├── value-objects/   # Objetos de valor
-│   │   └── repositories/    # Interfaces de repositorios
-│   ├── application/         # Casos de uso
-│   │   └── use-cases/       # Lógica de aplicación
-│   ├── infrastructure/      # Adaptadores externos
-│   │   └── repositories/    # Implementaciones de repositorios
-│   └── presentation/        # Capa de presentación
-│       ├── controllers/     # Controladores REST
-│       └── dtos/           # DTOs de entrada/salida
+
+## Dependencias
+- TypeORM para persistencia
+- Class Validator para validación
+- Event Emitter para eventos
+- GeoLocation para búsquedas
+
+## Testing
+```bash
+# Tests unitarios
+npm run test trainers
+
+# Tests e2e
+npm run test:e2e trainers
 ```
+
+## Eventos
+- `TrainerCreated`: Cuando se crea un nuevo entrenador
+- `TrainerUpdated`: Cuando se actualiza un entrenador
+- `SpecializationAdded`: Cuando se agrega una especialidad
+- `AvailabilityUpdated`: Cuando se actualiza la disponibilidad
+- `RatingAdded`: Cuando se agrega una calificación
 
 ## 🎯 Casos de Uso
 

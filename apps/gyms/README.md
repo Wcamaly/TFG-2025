@@ -1,140 +1,97 @@
-# Módulo Gyms
+# Módulo de Gimnasios
 
-Este módulo implementa la gestión de gimnasios siguiendo principios de **Domain-Driven Design (DDD)** y **Arquitectura Limpia**.
+## Descripción
+Módulo encargado de la gestión de gimnasios, sus instalaciones, horarios y servicios.
 
-## 🏗️ Arquitectura
+## Arquitectura
 
-El módulo está organizado en las siguientes capas:
+### Capas
+- **Domain**: 
+  - Entidades: Gym, Facility, Schedule, Service
+  - Value Objects: Address, ContactInfo, OperatingHours
+  - Agregados: GymAggregate
+- **Application**: 
+  - Casos de uso para gestión de gimnasios
+  - Servicios de aplicación
+- **Infrastructure**: 
+  - Repositorios
+  - Adaptadores de persistencia
+  - Integración con servicios externos
 
-### Domain Layer (`/domain`)
-- **Entities**: `Gym` - Entidad principal que representa un gimnasio
-- **Value Objects**: `GymLocationVO` - Objeto de valor para coordenadas geográficas
-- **Repositories**: `GymRepository` - Interfaz del repositorio (puerto)
+### Patrones de Diseño
+- **Repository Pattern**: Para acceso a datos de gimnasios
+- **Factory Pattern**: Para creación de instalaciones y servicios
+- **Composite Pattern**: Para estructura de instalaciones
+- **Observer Pattern**: Para eventos de gimnasio
 
-### Application Layer (`/application`)
-- **Use Cases**: Casos de uso que implementan la lógica de negocio
-  - `CreateGymUseCase` - Crear gimnasio
-  - `UpdateGymUseCase` - Actualizar gimnasio
-  - `FindGymsByLocationUseCase` - Buscar gimnasios por ubicación
-  - `GetGymDetailsUseCase` - Obtener detalles de un gimnasio
-  - `DeleteGymUseCase` - Eliminar gimnasio
+## Funcionalidades Principales
+- Gestión de gimnasios y sus datos
+- Administración de instalaciones
+- Control de horarios y disponibilidad
+- Gestión de servicios y clases
+- Sistema de membresías
+- Estadísticas y reportes
 
-### Infrastructure Layer (`/infrastructure`)
-- **Repositories**: `PrismaGymRepository` - Implementación del repositorio usando Prisma
+## Endpoints
+- `GET /gyms`: Listar gimnasios
+- `GET /gyms/:id`: Obtener gimnasio por ID
+- `POST /gyms`: Crear gimnasio
+- `PUT /gyms/:id`: Actualizar gimnasio
+- `DELETE /gyms/:id`: Eliminar gimnasio
+- `GET /gyms/:id/facilities`: Listar instalaciones
+- `POST /gyms/:id/facilities`: Agregar instalación
+- `GET /gyms/:id/schedule`: Obtener horario
+- `PUT /gyms/:id/schedule`: Actualizar horario
 
-### Presentation Layer (`/presentation`)
-- **Controllers**: `GymsController` - Controlador REST API
-- **DTOs**: Objetos de transferencia de datos para validación y documentación
-
-## 🚀 API Endpoints
-
-| Método | Ruta | Descripción | Autenticación |
-|--------|------|-------------|---------------|
-| POST | `/gyms` | Crear gimnasio | ✅ |
-| GET | `/gyms` | Listar gimnasios cercanos | ❌ |
-| GET | `/gyms/:id` | Ver detalles de un gimnasio | ❌ |
-| PUT | `/gyms/:id` | Actualizar un gimnasio | ✅ |
-| DELETE | `/gyms/:id` | Eliminar gimnasio | ✅ |
-
-## 📊 Modelo de Datos
-
-### Entidad Gym
+## Modelo de Datos
 ```typescript
-{
-  id: string;              // UUID único
-  name: string;            // Nombre del gimnasio
-  description: string;     // Descripción
-  address: string;         // Dirección física
-  location: {              // Coordenadas geográficas
-    latitude: number;
-    longitude: number;
-  };
-  phone: string;           // Teléfono de contacto
-  email: string;           // Email de contacto
-  openingHours: {          // Horarios de atención
-    monday?: { open: string; close: string };
-    tuesday?: { open: string; close: string };
-    // ... resto de días
-  };
-  ownerId: string;         // ID del propietario
-  createdAt: Date;         // Fecha de creación
-  updatedAt: Date;         // Fecha de actualización
-  isActive: boolean;       // Estado activo/inactivo
+interface Gym {
+  id: string;
+  name: string;
+  address: Address;
+  contactInfo: ContactInfo;
+  facilities: Facility[];
+  services: Service[];
+  schedule: Schedule;
+  membershipTypes: MembershipType[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface Facility {
+  id: string;
+  name: string;
+  type: FacilityType;
+  capacity: number;
+  equipment: Equipment[];
+  status: FacilityStatus;
+}
+
+interface Schedule {
+  operatingHours: OperatingHours[];
+  specialDates: SpecialDate[];
+  maintenancePeriods: MaintenancePeriod[];
 }
 ```
 
-## 🔍 Funcionalidades Principales
+## Dependencias
+- TypeORM para persistencia
+- Class Validator para validación
+- Event Emitter para eventos
+- GeoLocation para ubicaciones
 
-### 1. Crear Gimnasio
-- Valida que no exista otro gimnasio con el mismo nombre en un radio de 1km
-- Solo usuarios autenticados pueden crear gimnasios
-- Genera ID único automáticamente
-
-### 2. Buscar Gimnasios por Ubicación
-- Búsqueda por coordenadas geográficas
-- Filtros por distancia máxima (default: 10km)
-- Filtros por nombre
-- Paginación opcional
-- Resultados ordenados por distancia
-
-### 3. Gestión de Propietario
-- Solo el propietario puede actualizar/eliminar su gimnasio
-- Validación de autorización en todas las operaciones
-
-### 4. Eliminación Suave
-- Los gimnasios se marcan como inactivos en lugar de eliminarse físicamente
-- Preserva integridad referencial
-
-## 🧪 Testing
-
-El módulo incluye pruebas unitarias completas:
-
+## Testing
 ```bash
-# Ejecutar pruebas del módulo gyms
-npm test -- --testPathPattern=gyms
+# Tests unitarios
+npm run test gyms
 
-# Ejecutar con coverage
-npm test -- --testPathPattern=gyms --coverage
+# Tests e2e
+npm run test:e2e gyms
 ```
 
-### Cobertura de Pruebas
-- **Entidades**: Pruebas de comportamiento y inmutabilidad
-- **Casos de Uso**: Pruebas de lógica de negocio y manejo de errores
-- **Validaciones**: Pruebas de reglas de negocio
-
-## 🛠️ Tecnologías Utilizadas
-
-- **NestJS**: Framework backend
-- **Prisma**: ORM para base de datos
-- **PostgreSQL**: Base de datos con extensiones geoespaciales
-- **class-validator**: Validación de DTOs
-- **Swagger**: Documentación automática de API
-- **Jest**: Framework de testing
-
-## 📝 Principios Aplicados
-
-### SOLID
-- **S**: Cada clase tiene una responsabilidad única
-- **O**: Abierto para extensión, cerrado para modificación
-- **L**: Las implementaciones son intercambiables
-- **I**: Interfaces segregadas por funcionalidad
-- **D**: Dependencias invertidas usando inyección
-
-### DDD
-- **Entidades**: Objetos con identidad única
-- **Value Objects**: Objetos inmutables sin identidad
-- **Repositorios**: Abstracción de persistencia
-- **Casos de Uso**: Lógica de aplicación
-
-### Arquitectura Limpia
-- **Separación de capas**: Domain, Application, Infrastructure, Presentation
-- **Inversión de dependencias**: Las capas externas dependen de las internas
-- **Testabilidad**: Cada capa es testeable independientemente
-
-## 🚀 Próximas Mejoras
-
-- [ ] Implementar cache para búsquedas geográficas
-- [ ] Agregar métricas y logging
-- [ ] Implementar eventos de dominio
-- [ ] Agregar validaciones de horarios de apertura
-- [ ] Implementar sistema de ratings y reviews 
+## Eventos
+- `GymCreated`: Cuando se crea un nuevo gimnasio
+- `GymUpdated`: Cuando se actualiza un gimnasio
+- `FacilityAdded`: Cuando se agrega una instalación
+- `ScheduleUpdated`: Cuando se actualiza el horario
+- `MaintenanceScheduled`: Cuando se programa mantenimiento 

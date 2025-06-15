@@ -10,6 +10,10 @@ export * from './decorators/current-user.decorator';
 
 // Services
 export * from './services/bcrypt-password-hashing.service';
+export * from './services/email.service';
+export * from './notifications/notification.emitter';
+export * from './notifications/notification.constants';
+export * from './notifications/notification.types';
 
 // Interfaces and Constants
 export * from './interfaces/jwt-payload.interface';

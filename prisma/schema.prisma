@@ -17,33 +17,24 @@ enum UserRole {
   ADMIN
 }
 
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
 /// @model
-/// @description User entity for authentication and profile management
+/// @description User entity for profile management
 model User {
   /// @id
   /// @default(uuid())
   id                String    @id @default(uuid())
 
-  /// @description User's full name
-  name              String
-
   /// @description User's email address (unique)
   email             String    @unique
 
-  /// @description Hashed password
-  password          String
-
-  /// @description User role
-  role              UserRole  @default(USER)
-
-  /// @description Whether the user account is active
-  isActive          Boolean   @default(true)
-
-  /// @description Whether the user is locked
-  isLocked          Boolean   @default(false)
-
-  /// @description Number of failed login attempts
-  failedAttempts    Int       @default(0)
+  /// @description User status
+  status            UserStatus @default(ACTIVE)
 
   /// @description When the user was created
   createdAt         DateTime  @default(now())
@@ -51,23 +42,29 @@ model User {
   /// @description When the user was last updated
   updatedAt         DateTime  @updatedAt
 
-  /// @description When the user last logged in
-  lastLogin         DateTime?
+  /// @description User profile
+  profile           Profile?
 
-  /// @description When the last failed login attempt was
-  lastFailedAttempt DateTime?
+  /// @description User preferences
+  preferences       UserPreferences?
 
-  /// @description When the user's lock expires
-  lockExpiresAt     DateTime?
-
-  /// @description User metadata
-  metadata          Json      @default("{}")
+  /// @description Authentication data
+  auth              Auth?
 
   /// @description Gyms owned by this user
   gyms              Gym[]     @relation("GymOwner")
 
   /// @description Trainer profile (if user is a trainer)
   trainer           Trainer?  @relation("TrainerUser")
+
+  /// @description Payments made by this user
+  payments          Payment[]
+
+  /// @description Bookings made by this user
+  bookings          Booking[]
+
+  /// @description Booking quotas owned by this user
+  bookingQuotas     BookingQuota[]
 
   @@map("users")
 }
@@ -118,6 +115,12 @@ model Gym {
   /// @description Gym owner relationship
   owner            User           @relation("GymOwner", fields: [ownerId], references: [id])
 
+  /// @description Payments associated with this gym
+  payments          Payment[]
+
+  /// @description Bookings at this gym
+  bookings          Booking[]
+
   @@map("gyms")
   @@index([latitude, longitude])
   @@index([ownerId])
@@ -167,8 +170,398 @@ model Trainer {
   /// @description User relationship
   user             User           @relation("TrainerUser", fields: [userId], references: [id], onDelete: Cascade)
 
+  /// @description Routines associated with this trainer
+  routines         Routine[]
+
   @@map("trainers")
   @@index([userId])
   @@index([rating])
   @@index([pricePerSession])
+}
+
+/// @model
+/// @description Payment entity for handling gym payments
+model Payment {
+  /// @id
+  /// @default(uuid())
+  id              String    @id @default(uuid())
+
+  /// @description Amount of the payment
+  amount          Float
+
+  /// @description Currency of the payment
+  currency        String
+
+  /// @description Status of the payment
+  status          String
+
+  /// @description Payment provider reference
+  providerRef     String?
+
+  /// @description Payment provider used
+  provider        String
+
+  /// @description Payment metadata
+  metadata        Json      @default("{}")
+
+  /// @description When the payment was created
+  createdAt       DateTime  @default(now())
+
+  /// @description When the payment was last updated
+  updatedAt       DateTime  @updatedAt
+
+  /// @description ID of the user who made the payment
+  userId          String
+
+  /// @description User relationship
+  user            User      @relation(fields: [userId], references: [id])
+
+  /// @description ID of the gym associated with the payment
+  gymId           String
+
+  /// @description Gym relationship
+  gym             Gym       @relation(fields: [gymId], references: [id])
+
+  @@map("payments")
+  @@index([userId])
+  @@index([gymId])
+  @@index([status])
+  @@index([providerRef])
+}
+
+/// @model
+/// @description Booking entity for gym and trainer sessions
+model Booking {
+  /// @id
+  /// @default(uuid())
+  id              String    @id @default(uuid())
+
+  /// @description User who made the booking
+  userId          String
+
+  /// @description Trainer assigned to the session (optional)
+  trainerId       String?
+
+  /// @description Gym where the session takes place
+  gymId           String
+
+  /// @description Date and time of the session
+  date            DateTime
+
+  /// @description Status of the booking
+  status          String
+
+  /// @description Reference to the quota used
+  quotaId         String
+
+  /// @description When the booking was created
+  createdAt       DateTime  @default(now())
+
+  /// @description User relationship
+  user            User      @relation(fields: [userId], references: [id])
+
+  /// @description Gym relationship
+  gym             Gym       @relation(fields: [gymId], references: [id])
+
+  @@map("bookings")
+  @@index([userId])
+  @@index([trainerId])
+  @@index([gymId])
+  @@index([status])
+  @@index([quotaId])
+}
+
+/// @model
+/// @description Booking quota entity for managing available sessions
+model BookingQuota {
+  /// @id
+  /// @default(uuid())
+  id              String    @id @default(uuid())
+
+  /// @description User who owns the quota
+  userId          String
+
+  /// @description Total number of sessions allowed
+  total           Int
+
+  /// @description Remaining sessions
+  remaining       Int
+
+  /// @description Start date of validity
+  validFrom       DateTime
+
+  /// @description End date of validity
+  validUntil      DateTime
+
+  /// @description Reference to the payment that generated this quota
+  paymentId       String
+
+  /// @description User relationship
+  user            User      @relation(fields: [userId], references: [id])
+
+  @@map("booking_quotas")
+  @@index([userId])
+  @@index([paymentId])
+  @@index([validFrom, validUntil])
+}
+
+/// @model
+/// @description Trainer offert entity for trainer subscriptions
+model TrainerOffert {
+  /// @id
+  /// @default(uuid())
+  id              String    @id @default(uuid())
+
+  /// @description ID of the trainer who created the offert
+  trainerId       String
+
+  /// @description Title of the offert
+  title           String
+
+  /// @description Description of the offert
+  description     String
+
+  /// @description Price of the offert
+  price           Float
+
+  /// @description Currency of the offert
+  currency        String
+
+  /// @description Duration in days of the offert
+  durationInDays  Int
+
+  /// @description Whether the offert includes bookings
+  includesBookings Boolean
+
+  /// @description Number of bookings included in the offert
+  bookingQuota    Int?
+
+  /// @description Whether the offert is active
+  isActive        Boolean   @default(true)
+
+  /// @description When the offert was created
+  createdAt       DateTime  @default(now())
+
+  /// @description When the offert was last updated
+  updatedAt       DateTime  @updatedAt
+
+  /// @description Subscriptions for this offert
+  subscriptions   TrainerSubscription[]
+
+  @@map("trainer_offerts")
+  @@index([trainerId])
+  @@index([isActive])
+}
+
+/// @model
+/// @description Trainer subscription entity for user subscriptions
+model TrainerSubscription {
+  /// @id
+  /// @default(uuid())
+  id              String    @id @default(uuid())
+
+  /// @description ID of the user who subscribed
+  userId          String
+
+  /// @description ID of the offert subscribed to
+  offertId        String
+
+  /// @description When the subscription becomes valid
+  validFrom       DateTime
+
+  /// @description When the subscription expires
+  validUntil      DateTime
+
+  /// @description Status of the subscription
+  status          String
+
+  /// @description ID of the payment that created this subscription
+  paymentId       String
+
+  /// @description When the subscription was created
+  createdAt       DateTime  @default(now())
+
+  /// @description When the subscription was last updated
+  updatedAt       DateTime  @updatedAt
+
+  /// @description Offert relationship
+  offert          TrainerOffert @relation(fields: [offertId], references: [id])
+
+  @@map("trainer_subscriptions")
+  @@index([userId])
+  @@index([offertId])
+  @@index([status])
+  @@index([paymentId])
+  @@index([validUntil])
+}
+
+model Routine {
+  id          String   @id @default(uuid())
+  trainerId   String
+  title       String
+  description String
+  difficulty  String
+  duration    Int
+  language    String
+  tags        String[]
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  trainer     Trainer  @relation(fields: [trainerId], references: [id])
+
+  @@index([trainerId])
+}
+
+/// @model
+/// @description Authentication data for users
+model Auth {
+  /// @id
+  /// @default(uuid())
+  id                String    @id @default(uuid())
+
+  /// @description Reference to the user
+  userId            String    @unique
+
+  /// @description Hashed password
+  password          String
+
+  /// @description User role
+  role              UserRole  @default(USER)
+
+  /// @description Whether the user account is active
+  isActive          Boolean   @default(true)
+
+  /// @description Whether the user is locked
+  isLocked          Boolean   @default(false)
+
+  /// @description Number of failed login attempts
+  failedAttempts    Int       @default(0)
+
+  /// @description When the user last logged in
+  lastLogin         DateTime?
+
+  /// @description When the last failed login attempt was
+  lastFailedAttempt DateTime?
+
+  /// @description When the user's lock expires
+  lockExpiresAt     DateTime?
+
+  /// @description User metadata
+  metadata          Json      @default("{}")
+
+  /// @description When the auth record was created
+  createdAt         DateTime  @default(now())
+
+  /// @description When the auth record was last updated
+  updatedAt         DateTime  @updatedAt
+
+  /// @description User relationship
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("auth")
+}
+
+/// @model
+/// @description User profile information
+model Profile {
+  /// @id
+  /// @default(uuid())
+  id                String    @id @default(uuid())
+
+  /// @description User's first name
+  firstName         String
+
+  /// @description User's last name
+  lastName          String
+
+  /// @description User's phone number
+  phoneNumber       String
+
+  /// @description User's street address
+  street            String
+
+  /// @description User's city
+  city              String
+
+  /// @description User's state/province
+  state             String
+
+  /// @description User's country
+  country           String
+
+  /// @description User's postal code
+  postalCode        String
+
+  /// @description User's avatar URL
+  avatar            String?
+
+  /// @description User's bio
+  bio               String?
+
+  /// @description When the profile was created
+  createdAt         DateTime  @default(now())
+
+  /// @description When the profile was last updated
+  updatedAt         DateTime  @updatedAt
+
+  /// @description Reference to the user
+  userId            String    @unique
+
+  /// @description User relationship
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+/// @model
+/// @description User preferences and settings
+model UserPreferences {
+  /// @id
+  /// @default(uuid())
+  id                String    @id @default(uuid())
+
+  /// @description User's preferred language
+  language          String    @default("en")
+
+  /// @description Whether to receive email notifications
+  emailNotifications Boolean   @default(true)
+
+  /// @description Whether to receive push notifications
+  pushNotifications  Boolean   @default(true)
+
+  /// @description Whether to receive SMS notifications
+  smsNotifications   Boolean   @default(false)
+
+  /// @description Whether to receive marketing communications
+  marketingEmails    Boolean   @default(false)
+
+  /// @description User's preferred theme
+  theme              String    @default("light")
+
+  /// @description Profile visibility setting
+  profileVisibility  String    @default("public")
+
+  /// @description Whether to show email in profile
+  showEmail          Boolean   @default(false)
+
+  /// @description Whether to show phone in profile
+  showPhone          Boolean   @default(false)
+
+  /// @description Whether to show address in profile
+  showAddress        Boolean   @default(false)
+
+  /// @description When the preferences were created
+  createdAt          DateTime  @default(now())
+
+  /// @description When the preferences were last updated
+  updatedAt          DateTime  @updatedAt
+
+  /// @description Reference to the user
+  userId             String    @unique
+
+  /// @description User relationship
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
 } 

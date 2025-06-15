@@ -16,9 +16,10 @@ import { DeleteTrainerUseCase } from './application/use-cases/delete-trainer.use
 import { TRAINER_REPOSITORY } from './infrastructure/tokens';
 import { PrismaTrainerRepository } from './infrastructure/repositories/prisma-trainer.repository';
 import { PrismaModule } from '@/libs/src/infra/prisma/prisma.module';
+import { CoreModule } from '../../../libs/src/core';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, CoreModule],
   controllers: [TrainersController],
   providers: [
     

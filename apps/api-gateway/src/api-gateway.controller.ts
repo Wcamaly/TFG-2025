@@ -14,6 +14,7 @@ export class ApiGatewayController {
     gyms: process.env.GYMS_SERVICE_URL || 'http://localhost:3004',
     bookings: process.env.BOOKINGS_SERVICE_URL || 'http://localhost:3005',
     payments: process.env.PAYMENTS_SERVICE_URL || 'http://localhost:3006',
+    trainerOffert: process.env.TRAINER_OFFERT_SERVICE_URL || 'http://localhost:3007',
   };
 
   constructor(
@@ -98,6 +99,14 @@ export class ApiGatewayController {
   @ApiResponse({ status: 200, description: 'Request forwarded to bookings service' })
   async proxyToBookings(@Req() req: Request, @Res() res: Response) {
     return this.proxyRequest(req, res, this.services.bookings);
+  }
+
+  @All('/trainer-offert/*')
+  @ApiTags('trainer-offert')
+  @ApiOperation({ summary: 'Proxy to Trainer Offert Service' })
+  @ApiResponse({ status: 200, description: 'Request forwarded to trainer offert service' })
+  async proxyToTrainerOffert(@Req() req: Request, @Res() res: Response) {
+    return this.proxyRequest(req, res, this.services.trainerOffert);
   }
 
   @All('/payments/*')

@@ -1,0 +1,2 @@
+export const NOTIFICATION_PATTERN = 'notification';
+export const NOTIFICATION_SERVICE = 'NOTIFICATION_SERVICE'; 
